@@ -11,6 +11,7 @@ namespace App\Console\Commands;
 
 use Exception;
 use Illuminate\Console\Command;
+use App\Http\Controllers\Filesystem;
 
 /**
  * Class NewGutenBlock
@@ -27,7 +28,7 @@ class NewGutenBlock extends Command
      */
     protected $signature = "new:gutenBlock
         {path : The location where the block directory should be created}
-        {pwd : Passed automatically by bin/gamroth.}";
+        {pwd? : Passed automatically by bin/gamroth.}";
 
     /**
      * The console command description.
@@ -35,6 +36,23 @@ class NewGutenBlock extends Command
      * @var string
      */
     protected $description = "Add new Gutenberg block";
+
+    /**
+     * The block's path
+     *
+     * @var string
+     */
+    protected static $gutenblockpath = "../../resources/stubs/gutenblock";
+
+    /**
+     * Default params
+     */
+    protected static $gutenBlockName = "example-block";
+    protected static $gutenBlockTitle = "Example Block";
+    protected static $gutenBlockSupports = [ "anchor" => false, "align" => false ];
+    protected static $gutenBlockKeywords = [];
+    protected static $gutenBlockNamespace = 'custom-blocks';
+    protected static $gutenBlockTranslation = 'custom-blocks';
 
     /**
      * Execute the console command.
@@ -45,12 +63,27 @@ class NewGutenBlock extends Command
     {
         try {
             $this->path = $this->argument('pwd')."/".$this->argument('path')."/";
-            file_put_contents($this->path.'file.txt', 'Hallo world!');
-            print $this->path.'file.txt';
-            print dirname($this->path);
+
+            $this->getBlockOptions();
         } catch (Exception $e) {
-            $this->error("An error occurred");
+            $this->error(__("An error occurred"));
             dd($e);
         }
+    }
+
+    /**
+     * get block options
+     * @return void
+     */
+    public function getBlockOptions()
+    {
+        $blockName = readline(__('Enter a string: '));
+
+        if (empty($blockName)) {
+            $blockName = self::$gutenBlockName;
+        }
+
+        echo $this->path . $blockName . PHP_EOL;
+        Filesystem::rcopy(self::$gutenblockpath, $this->path . $blockName);
     }
 }
