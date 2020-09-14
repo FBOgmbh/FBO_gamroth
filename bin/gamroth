@@ -1,13 +1,32 @@
-#!/usr/bin/env php
-<?php
+#!/usr/bin/env bash
 
-if (file_exists(__DIR__.'/../../../autoload.php')) {
-    require __DIR__.'/../../../autoload.php';
-} else {
-    require __DIR__.'/../vendor/autoload.php';
-}
+SOURCE="${BASH_SOURCE[0]}"
 
-$app = new Symfony\Component\Console\Application('gamroth', 'dev');
-$app->add(new FBO\NewMedia\Console\NewCommand);
+# If the current source is a symbolic link, we need to resolve it to an
+# actual directory name. We'll use PHP to do this easier than we can
+# do it in pure Bash. So, we'll call into PHP CLI here to resolve.
+if [[ -L "$SOURCE" ]]
+then
+    DIR=$(php -r "echo dirname(realpath('$SOURCE'));")
+else
+    DIR="$( cd "$( dirname "$SOURCE" )" && pwd )"
+fi
 
-$app->run();
+# If we are in the global Composer "bin" directory, we need to bump our
+# current directory up two, so that we will correctly proxy into the
+# Valet CLI script which is written in PHP. Will use PHP to do it.
+if [ ! -f "$DIR/gamroth" ]
+then
+    DIR=$(php -r "echo realpath('$DIR/../fbo/gamroth/bin');")
+fi
+
+if [[ "$EUID" -ne 0 ]]
+then
+    sudo --preserve-env "$SOURCE" "$@"
+    exit
+fi
+
+# Finally, for every other command we will just proxy into the PHP tool
+# and let it handle the request. These are commands which can be run
+# without sudo and don't require taking over terminals like Ngrok.
+php "$DIR/../artisan" "$@" "$PWD"
